@@ -1,9 +1,13 @@
 import subprocess
 import time
 import numpy as np
+
 from PIL import Image
-from flask import Flask, Response, request, jsonify
+from flask import Flask, Response, request, jsonify, send_file
 from io import BytesIO
+import os
+from pathlib import Path
+from datetime import datetime
 
 import threading
 import re
@@ -15,6 +19,7 @@ WIDTH = 1920
 HEIGHT = 1080
 PIXEL_FORMAT = 'rgb24'
 CAMERA_PATH = '/dev/video0'
+SNAPSHOT_DIR = '/home/snail/snapshots/'
 
 # Whitelist of allowed camera controls to prevent command injection
 ALLOWED_CONTROLS = {
@@ -148,6 +153,26 @@ def index():
             margin: 0;
             padding: 0;
             color: #eee;
+          }
+          .nav-bar {
+            position: fixed;
+
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+          }
+          .nav-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(0, 123, 255, 0.8);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background 0.2s;
+          }
+          .nav-link:hover {
+            background: rgba(0, 123, 255, 1);
           }
           /* Video container fills the entire viewport height, pushing controls down */
           .video-container {
@@ -381,6 +406,9 @@ def index():
         </style>
       </head>
       <body>
+        <div class="nav-bar">
+          <a href="/snapshots" class="nav-link">View Snapshots</a>
+        </div>
         <div class="video-container">
           <div class="startup-notification" id="startup-notification">
             Press SHIFT to Toggle Mouse Control for Pan/Tilt/Zoom
@@ -673,7 +701,391 @@ def video_feed():
     """Route to stream the video frames."""
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/snapshots/list')
+def list_snapshots():
+    """API endpoint to get list of all snapshots."""
+    try:
+        snapshot_path = Path(SNAPSHOT_DIR)
+        if not snapshot_path.exists():
+            return jsonify({'error': 'Snapshot directory not found'}), 404
+        
+        # Get all .jpg files, sorted by filename (which includes timestamp)
+        snapshots = sorted([f.name for f in snapshot_path.glob('*.jpg')])
+
+        
+        # Parse timestamps and create metadata
+        snapshot_data = []
+        for filename in snapshots:
+            try:
+                # Parse timestamp from filename (format: YYYYMMDD_HHMMSS.jpg)
+                timestamp_str = filename.replace('.jpg', '')
+                dt = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
+                snapshot_data.append({
+                    'filename': filename,
+                    'timestamp': dt.isoformat(),
+                    'display': dt.strftime('%Y-%m-%d %H:%M:%S')
+                })
+            except ValueError:
+                # Skip files that don't match the expected format
+                continue
+        
+        return jsonify({'snapshots': snapshot_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/snapshots/image/<filename>')
+def get_snapshot(filename):
+    """Serve a specific snapshot image."""
+    try:
+        # Sanitize filename to prevent directory traversal
+        safe_filename = os.path.basename(filename)
+        filepath = os.path.join(SNAPSHOT_DIR, safe_filename)
+        
+        print(f"Attempting to serve: {filepath}")
+        print(f"File exists: {os.path.exists(filepath)}")
+        
+        if not os.path.exists(filepath):
+            print(f"File not found: {filepath}")
+            return jsonify({'error': 'Snapshot not found'}), 404
+        
+        return send_file(filepath, mimetype='image/jpeg')
+    except Exception as e:
+        print(f"Error serving snapshot: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/snapshots')
+def snapshots_page():
+    """Serves the snapshot timeline browser page."""
+    return """
+    <!DOCTYPE html>
+    <html>
+      <head>
+
+        <title>Snapshot Timeline</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          html, body {
+            height: 100%;
+            font-family: sans-serif;
+            background-color: #111;
+            color: #eee;
+            overflow: hidden;
+
+          }
+          .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: #222;
+            border-radius: 8px;
+          }
+          .header h1 {
+            font-size: 1.5em;
+          }
+          .nav-link {
+            color: #007bff;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            transition: all 0.2s;
+          }
+          .nav-link:hover {
+            background: #007bff;
+            color: white;
+          }
+          .image-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+
+            position: relative;
+            min-height: 0;
+          }
+          #snapshot-image {
+
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+          }
+          .loading {
+            position: absolute;
+            color: #888;
+            font-size: 1.2em;
+          }
+          .controls {
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+          }
+          .timeline-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+          }
+          .timeline-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 20px;
+            background: #444;
+            outline: none;
+            border-radius: 10px;
+          }
+
+          .timeline-slider::-webkit-slider-thumb {
+
+            -webkit-appearance: none;
+            appearance: none;
+            width: 30px;
+            height: 30px;
+            background: #007bff;
+
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid #fff;
+          }
+          .timeline-slider::-moz-range-thumb {
+            width: 30px;
+            height: 30px;
+            background: #007bff;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid #fff;
+          }
+
+          .info-panel {
+            display: flex;
+            justify-content: space-between;
+
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+          }
+          .timestamp {
+            font-size: 1.2em;
+
+            font-weight: bold;
+            color: #007bff;
+          }
+          .counter {
+            color: #888;
+          }
+          .button-group {
+            display: flex;
+            gap: 10px;
+          }
+          button {
+            padding: 10px 20px;
+            background: #007bff;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.2s;
+          }
+          button:hover {
+            background: #0056b3;
+          }
+          button:disabled {
+            background: #444;
+            cursor: not-allowed;
+          }
+          .keyboard-hint {
+            color: #666;
+            font-size: 0.9em;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Snapshot Timeline Browser</h1>
+            <a href="/" class="nav-link">← Live Camera</a>
+          </div>
+          
+          <div class="image-container">
+            <div class="loading" id="loading">Loading snapshots...</div>
+            <img id="snapshot-image" style="display: none;" />
+          </div>
+          
+          <div class="controls">
+            <div class="timeline-container">
+              <button id="prev-btn" disabled>◀</button>
+              <input 
+                type="range" 
+                id="timeline-slider" 
+                class="timeline-slider"
+                min="0"
+                max="0"
+                value="0"
+                disabled
+              />
+              <button id="next-btn" disabled>▶</button>
+            </div>
+            
+
+            <div class="info-panel">
+              <div class="timestamp" id="timestamp">--</div>
+              <div class="counter" id="counter">0 / 0</div>
+              <div class="button-group">
+                <button id="first-btn" disabled>⏮ First</button>
+                <button id="last-btn" disabled>Last ⏭</button>
+              </div>
+            </div>
+            
+            <div class="keyboard-hint">
+              Use ← → arrow keys or drag the slider to navigate
+            </div>
+          </div>
+        </div>
+
+        
+        <script>
+          let snapshots = [];
+          let currentIndex = 0;
+          
+
+          const imageEl = document.getElementById('snapshot-image');
+          const loadingEl = document.getElementById('loading');
+          const sliderEl = document.getElementById('timeline-slider');
+          const timestampEl = document.getElementById('timestamp');
+          const counterEl = document.getElementById('counter');
+          const prevBtn = document.getElementById('prev-btn');
+          const nextBtn = document.getElementById('next-btn');
+          const firstBtn = document.getElementById('first-btn');
+          const lastBtn = document.getElementById('last-btn');
+          
+          // Load snapshot list
+          async function loadSnapshots() {
+            try {
+              const response = await fetch('/snapshots/list');
+              const data = await response.json();
+              
+              if (data.error) {
+                loadingEl.textContent = 'Error: ' + data.error;
+                return;
+              }
+              
+              snapshots = data.snapshots;
+              
+              if (snapshots.length === 0) {
+                loadingEl.textContent = 'No snapshots found';
+                return;
+              }
+              
+              // Initialize UI
+              sliderEl.max = snapshots.length - 1;
+              sliderEl.disabled = false;
+              prevBtn.disabled = false;
+
+              nextBtn.disabled = false;
+              firstBtn.disabled = false;
+              lastBtn.disabled = false;
+              
+              // Load the most recent snapshot
+              currentIndex = snapshots.length - 1;
+              loadSnapshot(currentIndex);
+              
+            } catch (error) {
+              loadingEl.textContent = 'Error loading snapshots: ' + error.message;
+            }
+          }
+          
+          // Load and display a specific snapshot
+          function loadSnapshot(index) {
+            if (index < 0 || index >= snapshots.length) return;
+            
+            currentIndex = index;
+            const snapshot = snapshots[index];
+            
+            imageEl.src = '/snapshots/image/' + snapshot.filename;
+            imageEl.style.display = 'block';
+            loadingEl.style.display = 'none';
+            
+            timestampEl.textContent = snapshot.display;
+            counterEl.textContent = `${index + 1} / ${snapshots.length}`;
+            sliderEl.value = index;
+          }
+          
+          // Event listeners
+          sliderEl.addEventListener('input', (e) => {
+            loadSnapshot(parseInt(e.target.value));
+          });
+
+          
+          prevBtn.addEventListener('click', () => {
+            if (currentIndex > 0) {
+              loadSnapshot(currentIndex - 1);
+            }
+          });
+          
+          nextBtn.addEventListener('click', () => {
+
+            if (currentIndex < snapshots.length - 1) {
+              loadSnapshot(currentIndex + 1);
+            }
+          });
+          
+          firstBtn.addEventListener('click', () => {
+            loadSnapshot(0);
+          });
+          
+          lastBtn.addEventListener('click', () => {
+            loadSnapshot(snapshots.length - 1);
+          });
+          
+          // Keyboard navigation
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+              e.preventDefault();
+              if (currentIndex > 0) {
+                loadSnapshot(currentIndex - 1);
+              }
+            } else if (e.key === 'ArrowRight') {
+              e.preventDefault();
+              if (currentIndex < snapshots.length - 1) {
+                loadSnapshot(currentIndex + 1);
+              }
+            } else if (e.key === 'Home') {
+              e.preventDefault();
+              loadSnapshot(0);
+            } else if (e.key === 'End') {
+              e.preventDefault();
+              loadSnapshot(snapshots.length - 1);
+            }
+          });
+          
+          // Load snapshots on page load
+          loadSnapshots();
+        </script>
+      </body>
+    </html>
+    """
+
 if __name__ == '__main__':
     # Run the Flask app
     app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
-
