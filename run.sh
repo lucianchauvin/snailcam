@@ -42,7 +42,7 @@ while true; do
         fi
 
         BRIGHTNESS=$(magick "$TMP_FILE" -colorspace Gray -format "%[fx:mean]" info: 2>/dev/null || echo "0")
-        if (( $(echo "$BRIGHTNESS > 0.3" | bc -l) )); then
+        if (( $(echo "$BRIGHTNESS > 0.26" | bc -l) )); then
             mv "$TMP_FILE" "$OUT_FILE"
             echo "[$TIMESTAMP] Saved bright snapshot (brightness=$BRIGHTNESS)"
         else
