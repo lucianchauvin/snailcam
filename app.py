@@ -952,9 +952,11 @@ def snapshots_page():
         }
 
         function stopPlayback() {
-            clearInterval(playbackInterval);
+            // Use clearTimeout because we are using setTimeout now
+            clearTimeout(playbackInterval);
             playbackInterval = null;
-            imageEl.onload = null;
+            imageEl.onload = null; 
+            
             playFwdBtn.classList.remove('active');
             playBackBtn.classList.remove('active');
             playFwdBtn.textContent = "Play ⏵";
@@ -962,13 +964,24 @@ def snapshots_page():
         }
 
         function startPlayback(direction) {
-            if (playbackInterval) clearTimeout(playbackInterval);
+            if (playbackInterval) stopPlayback();
             
             playbackDirection = direction;
             
-            // Add an event listener to the image so we know when it's done
+            // UI Feedback
+            if (direction === 1) {
+                playFwdBtn.classList.add('active');
+                playFwdBtn.textContent = "Pause";
+            } else {
+                playBackBtn.classList.add('active');
+                playBackBtn.textContent = "Pause";
+            }
+
+            // This is the "Engine"
             imageEl.onload = () => {
-                if (playbackInterval) { // Only if we are still in "Play" mode
+                // We check if playbackInterval is NOT null 
+                // (which means we haven't clicked 'stop')
+                if (playbackInterval !== null) {
                     playbackInterval = setTimeout(runNextStep, speedSlider.value);
                 }
             };
@@ -982,8 +995,11 @@ def snapshots_page():
                 }
             }
 
-            runNextStep(); // Kick off the first one
+            // CRITICAL: Assign a non-null value immediately so the onload check passes
+            playbackInterval = true; 
+            runNextStep(); 
         }
+
 
         // Event Listeners
         playFwdBtn.onclick = () => playbackInterval && playbackDirection === 1 ? stopPlayback() : startPlayback(1);
