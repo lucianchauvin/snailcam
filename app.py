@@ -954,6 +954,7 @@ def snapshots_page():
         function stopPlayback() {
             clearInterval(playbackInterval);
             playbackInterval = null;
+            imageEl.onload = null;
             playFwdBtn.classList.remove('active');
             playBackBtn.classList.remove('active');
             playFwdBtn.textContent = "Play ⏵";
@@ -961,25 +962,27 @@ def snapshots_page():
         }
 
         function startPlayback(direction) {
-            if (playbackInterval) stopPlayback();
+            if (playbackInterval) clearTimeout(playbackInterval);
             
             playbackDirection = direction;
-            if (direction === 1) {
-                playFwdBtn.classList.add('active');
-                playFwdBtn.textContent = "Pause";
-            } else {
-                playBackBtn.classList.add('active');
-                playBackBtn.textContent = "Pause";
-            }
+            
+            // Add an event listener to the image so we know when it's done
+            imageEl.onload = () => {
+                if (playbackInterval) { // Only if we are still in "Play" mode
+                    playbackInterval = setTimeout(runNextStep, speedSlider.value);
+                }
+            };
 
-            playbackInterval = setInterval(() => {
+            function runNextStep() {
                 let nextIndex = currentIndex + playbackDirection;
                 if (nextIndex >= 0 && nextIndex < snapshots.length) {
                     loadSnapshot(nextIndex);
                 } else {
                     stopPlayback();
                 }
-            }, speedSlider.value);
+            }
+
+            runNextStep(); // Kick off the first one
         }
 
         // Event Listeners
