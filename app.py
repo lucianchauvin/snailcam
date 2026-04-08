@@ -826,331 +826,190 @@ def snapshots_page():
     """Serves the snapshot timeline browser page."""
     return """
 <!DOCTYPE html>
-    <html>
-      <head>
+<html>
+<head>
+    <title>Snapshot Timeline</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; font-family: sans-serif; background-color: #111; color: #eee; overflow: hidden; }
+        .container { display: flex; flex-direction: column; height: 100vh; padding: 20px; gap: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #222; border-radius: 8px; }
+        
+        .image-container { flex: 1; display: flex; justify-content: center; align-items: center; background: #000; border-radius: 8px; overflow: hidden; position: relative; min-height: 0; }
+        #snapshot-image { max-width: 100%; max-height: 100%; object-fit: contain; }
+        
+        .controls { background: #222; padding: 20px; border-radius: 8px; display: flex; flex-direction: column; gap: 15px; }
+        .timeline-container { display: flex; align-items: center; gap: 15px; }
+        .timeline-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 12px; background: #444; outline: none; border-radius: 10px; }
+        .timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; background: #007bff; cursor: pointer; border-radius: 50%; border: 2px solid #fff; }
 
-        <title>Snapshot Timeline</title>
-        <style>
-          * {
-                  margin: 0;
-                  padding: 0;
-                  box-sizing: border-box;
-                  }
-          html, body {
-                  height: 100%;
-                  font-family: sans-serif;
-                  background-color: #111;
-                  color: #eee;
-                  overflow: hidden;
-
-                  }
-          .container {
-                  display: flex;
-                  flex-direction: column;
-                  height: 100vh;
-                  padding: 20px;
-                  gap: 20px;
-                  }
-          .header {
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  padding: 10px 20px;
-                  background: #222;
-                  border-radius: 8px;
-                  }
-          .header h1 {
-                  font-size: 1.5em;
-                  }
-          .nav-link {
-                  color: #007bff;
-                  text-decoration: none;
-                  padding: 8px 16px;
-                  border: 1px solid #007bff;
-                  border-radius: 4px;
-                  transition: all 0.2s;
-                  }
-          .nav-link:hover {
-                  background: #007bff;
-                  color: white;
-                  }
-          .image-container {
-                  flex: 1;
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  background: #000;
-                  border-radius: 8px;
-                  overflow: hidden;
-
-                  position: relative;
-                  min-height: 0;
-                  }
-          #snapshot-image {
-
-                  max-width: 100%;
-                  max-height: 100%;
-                  object-fit: contain;
-                  }
-          .loading {
-                  position: absolute;
-                  color: #888;
-                  font-size: 1.2em;
-                  }
-          .controls {
-                  background: #222;
-                  padding: 20px;
-                  border-radius: 8px;
-                  display: flex;
-                  flex-direction: column;
-                  gap: 15px;
-                  }
-          .timeline-container {
-                  display: flex;
-                  align-items: center;
-                  gap: 15px;
-                  }
-          .timeline-slider {
-                  flex: 1;
-                  -webkit-appearance: none;
-                  appearance: none;
-                  height: 20px;
-                  background: #444;
-                  outline: none;
-                  border-radius: 10px;
-                  }
-
-          .timeline-slider::-webkit-slider-thumb {
-
-                  -webkit-appearance: none;
-                  appearance: none;
-                  width: 30px;
-                  height: 30px;
-                  background: #007bff;
-
-                  cursor: pointer;
-                  border-radius: 50%;
-                  border: 2px solid #fff;
-                  }
-          .timeline-slider::-moz-range-thumb {
-                  width: 30px;
-                  height: 30px;
-                  background: #007bff;
-                  cursor: pointer;
-                  border-radius: 50%;
-                  border: 2px solid #fff;
-                  }
-
-          .info-panel {
-                  display: flex;
-                  justify-content: space-between;
-
-                  align-items: center;
-                  flex-wrap: wrap;
-                  gap: 10px;
-                  }
-          .timestamp {
-                  font-size: 1.2em;
-
-                  font-weight: bold;
-                  color: #007bff;
-                  }
-          .counter {
-                  color: #888;
-                  }
-          .button-group {
-                  display: flex;
-                  gap: 10px;
-                  }
-          button {
-                  padding: 10px 20px;
-                  background: #007bff;
-                  border: none;
-                  border-radius: 4px;
-                  color: white;
-                  cursor: pointer;
-                  font-size: 1em;
-                  transition: background 0.2s;
-                  }
-          button:hover {
-                  background: #0056b3;
-                  }
-          button:disabled {
-                  background: #444;
-                  cursor: not-allowed;
-                  }
-          .keyboard-hint {
-                  color: #666;
-                  font-size: 0.9em;
-                  text-align: center;
-                  }
-          </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
+        /* Centered Playback Controls */
+        .playback-main { display: flex; justify-content: center; align-items: center; gap: 20px; margin: 5px 0; }
+        .speed-control { display: flex; align-items: center; gap: 10px; color: #888; font-size: 0.9em; }
+        
+        .info-panel { display: flex; justify-content: space-between; align-items: center; }
+        .timestamp { font-size: 1.2em; font-weight: bold; color: #007bff; }
+        
+        button { padding: 10px 18px; background: #333; border: 1px solid #444; border-radius: 4px; color: white; cursor: pointer; transition: all 0.2s; }
+        button:hover { background: #444; }
+        button.active { background: #007bff; border-color: #fff; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        .nav-link { color: #007bff; text-decoration: none; padding: 8px 16px; border: 1px solid #007bff; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
             <h1>Snapshot Timeline Browser</h1>
             <a href="/" class="nav-link">← Live Camera</a>
-          </div>
-
-          <div class="image-container">
-            <div class="loading" id="loading">Loading snapshots...</div>
-            <img id="snapshot-image" style="display: none;" />
-          </div>
-
-          <div class="controls">
-            <div class="timeline-container">
-              <button id="prev-btn" disabled>◀</button>
-              <input 
-                type="range" 
-                id="timeline-slider" 
-                class="timeline-slider"
-                min="0"
-                max="0"
-                value="0"
-                disabled
-              />
-              <button id="next-btn" disabled>▶</button>
-            </div>
-
-
-            <div class="info-panel">
-              <div class="timestamp" id="timestamp">--</div>
-              <div class="counter" id="counter">0 / 0</div>
-              <div class="button-group">
-                <button id="first-btn" disabled>⏮ First</button>
-                <button id="last-btn" disabled>Last ⏭</button>
-              </div>
-            </div>
-
-            <div class="keyboard-hint">
-              Use ← → arrow keys or drag the slider to navigate
-            </div>
-          </div>
         </div>
 
+        <div class="image-container">
+            <div id="loading" style="color: #888;">Loading snapshots...</div>
+            <img id="snapshot-image" style="display: none;" />
+        </div>
 
-        <script>
-          let snapshots = [];
-          let currentIndex = 0;
+        <div class="controls">
+            <div class="timeline-container">
+                <button id="first-btn" title="First" disabled>⏮</button>
+                <input type="range" id="timeline-slider" class="timeline-slider" min="0" max="0" value="0" disabled />
+                <button id="last-btn" title="Last" disabled>⏭</button>
+            </div>
 
+            <div class="playback-main">
+                <button id="play-back-btn" title="Play Backward">⏴ Play</button>
+                <button id="step-back-btn" title="Step Back">◀</button>
+                <button id="step-fwd-btn" title="Step Forward">▶</button>
+                <button id="play-fwd-btn" title="Play Forward">Play ⏵</button>
+                
+                <div class="speed-control">
+                    <span>Speed:</span>
+                    <input type="range" id="speed-slider" min="50" max="1000" step="50" value="300" style="width: 100px;">
+                    <span id="speed-val">0.3s</span>
+                </div>
+            </div>
 
-          const imageEl = document.getElementById('snapshot-image');
-          const loadingEl = document.getElementById('loading');
-          const sliderEl = document.getElementById('timeline-slider');
-          const timestampEl = document.getElementById('timestamp');
-          const counterEl = document.getElementById('counter');
-          const prevBtn = document.getElementById('prev-btn');
-          const nextBtn = document.getElementById('next-btn');
-          const firstBtn = document.getElementById('first-btn');
-          const lastBtn = document.getElementById('last-btn');
+            <div class="info-panel">
+                <div class="timestamp" id="timestamp">--</div>
+                <div id="counter" style="color: #888;">0 / 0</div>
+            </div>
+        </div>
+    </div>
 
-          // Load snapshot list
-          async function loadSnapshots() {
-                  try {
-                      const response = await fetch('/snapshots/list');
-                      const data = await response.json();
+    <script>
+        let snapshots = [];
+        let currentIndex = 0;
+        let playbackInterval = null;
+        let playbackDirection = 1; // 1 for forward, -1 for backward
 
-                      if (data.error) {
-                          loadingEl.textContent = 'Error: ' + data.error;
-                          return;
-                          }
+        const imageEl = document.getElementById('snapshot-image');
+        const loadingEl = document.getElementById('loading');
+        const sliderEl = document.getElementById('timeline-slider');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValLabel = document.getElementById('speed-val');
+        const timestampEl = document.getElementById('timestamp');
+        const counterEl = document.getElementById('counter');
+        
+        const playFwdBtn = document.getElementById('play-fwd-btn');
+        const playBackBtn = document.getElementById('play-back-btn');
+        const stepFwdBtn = document.getElementById('step-fwd-btn');
+        const stepBackBtn = document.getElementById('step-back-btn');
 
-                      snapshots = data.snapshots;
+        async function loadSnapshots() {
+            try {
+                const response = await fetch('/snapshots/list');
+                const data = await response.json();
+                if (data.error || !data.snapshots.length) {
+                    loadingEl.textContent = data.error || 'No snapshots found';
+                    return;
+                }
+                snapshots = data.snapshots;
+                sliderEl.max = snapshots.length - 1;
+                sliderEl.disabled = false;
+                [playFwdBtn, playBackBtn, stepFwdBtn, stepBackBtn, 
+                 document.getElementById('first-btn'), 
+                 document.getElementById('last-btn')].forEach(b => b.disabled = false);
 
-                      if (snapshots.length === 0) {
-                          loadingEl.textContent = 'No snapshots found';
-                          return;
-                          }
+                currentIndex = snapshots.length - 1;
+                loadSnapshot(currentIndex);
+            } catch (e) { loadingEl.textContent = 'Error: ' + e.message; }
+        }
 
-                      // Initialize UI
-                      sliderEl.max = snapshots.length - 1;
-                      sliderEl.disabled = false;
-                      prevBtn.disabled = false;
+        function loadSnapshot(index) {
+            if (index < 0 || index >= snapshots.length) {
+                stopPlayback();
+                return;
+            }
+            currentIndex = index;
+            const snapshot = snapshots[index];
+            imageEl.src = '/snapshots/image/' + snapshot.filename;
+            imageEl.style.display = 'block';
+            loadingEl.style.display = 'none';
+            timestampEl.textContent = snapshot.display;
+            counterEl.textContent = `${index + 1} / ${snapshots.length}`;
+            sliderEl.value = index;
+        }
 
-                      nextBtn.disabled = false;
-                      firstBtn.disabled = false;
-                      lastBtn.disabled = false;
+        function stopPlayback() {
+            clearInterval(playbackInterval);
+            playbackInterval = null;
+            playFwdBtn.classList.remove('active');
+            playBackBtn.classList.remove('active');
+            playFwdBtn.textContent = "Play ⏵";
+            playBackBtn.textContent = "⏴ Play";
+        }
 
-                      // Load the most recent snapshot
-                      currentIndex = snapshots.length - 1;
-                      loadSnapshot(currentIndex);
+        function startPlayback(direction) {
+            if (playbackInterval) stopPlayback();
+            
+            playbackDirection = direction;
+            if (direction === 1) {
+                playFwdBtn.classList.add('active');
+                playFwdBtn.textContent = "Pause";
+            } else {
+                playBackBtn.classList.add('active');
+                playBackBtn.textContent = "Pause";
+            }
 
-                      } catch (error) {
-                          loadingEl.textContent = 'Error loading snapshots: ' + error.message;
-                          }
-                      }
+            playbackInterval = setInterval(() => {
+                let nextIndex = currentIndex + playbackDirection;
+                if (nextIndex >= 0 && nextIndex < snapshots.length) {
+                    loadSnapshot(nextIndex);
+                } else {
+                    stopPlayback();
+                }
+            }, speedSlider.value);
+        }
 
-          // Load and display a specific snapshot
-          function loadSnapshot(index) {
-                  if (index < 0 || index >= snapshots.length) return;
+        // Event Listeners
+        playFwdBtn.onclick = () => playbackInterval && playbackDirection === 1 ? stopPlayback() : startPlayback(1);
+        playBackBtn.onclick = () => playbackInterval && playbackDirection === -1 ? stopPlayback() : startPlayback(-1);
+        
+        stepFwdBtn.onclick = () => { stopPlayback(); loadSnapshot(currentIndex + 1); };
+        stepBackBtn.onclick = () => { stopPlayback(); loadSnapshot(currentIndex - 1); };
+        
+        document.getElementById('first-btn').onclick = () => { stopPlayback(); loadSnapshot(0); };
+        document.getElementById('last-btn').onclick = () => { stopPlayback(); loadSnapshot(snapshots.length - 1); };
+        
+        sliderEl.oninput = (e) => { stopPlayback(); loadSnapshot(parseInt(e.target.value)); };
+        
+        speedSlider.oninput = (e) => {
+            speedValLabel.textContent = (e.target.value / 1000).toFixed(2) + 's';
+            if (playbackInterval) startPlayback(playbackDirection); // Restart with new speed
+        };
 
-                  currentIndex = index;
-                  const snapshot = snapshots[index];
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') stepBackBtn.click();
+            if (e.key === 'ArrowRight') stepFwdBtn.click();
+            if (e.key === ' ') { e.preventDefault(); playFwdBtn.click(); }
+        });
 
-                  imageEl.src = '/snapshots/image/' + snapshot.filename;
-                  imageEl.style.display = 'block';
-                  loadingEl.style.display = 'none';
-
-                  timestampEl.textContent = snapshot.display;
-                  counterEl.textContent = `${index + 1} / ${snapshots.length}`;
-                  sliderEl.value = index;
-                  }
-
-          // Event listeners
-          sliderEl.addEventListener('input', (e) => {
-              loadSnapshot(parseInt(e.target.value));
-              });
-
-
-          prevBtn.addEventListener('click', () => {
-              if (currentIndex > 0) {
-                  loadSnapshot(currentIndex - 1);
-                  }
-              });
-
-          nextBtn.addEventListener('click', () => {
-
-              if (currentIndex < snapshots.length - 1) {
-                  loadSnapshot(currentIndex + 1);
-                  }
-              });
-
-          firstBtn.addEventListener('click', () => {
-              loadSnapshot(0);
-              });
-
-          lastBtn.addEventListener('click', () => {
-              loadSnapshot(snapshots.length - 1);
-              });
-
-          // Keyboard navigation
-          document.addEventListener('keydown', (e) => {
-              if (e.key === 'ArrowLeft') {
-                  e.preventDefault();
-                  if (currentIndex > 0) {
-                      loadSnapshot(currentIndex - 1);
-                      }
-                  } else if (e.key === 'ArrowRight') {
-                      e.preventDefault();
-                      if (currentIndex < snapshots.length - 1) {
-                          loadSnapshot(currentIndex + 1);
-                          }
-                      } else if (e.key === 'Home') {
-                          e.preventDefault();
-                          loadSnapshot(0);
-                          } else if (e.key === 'End') {
-                              e.preventDefault();
-                              loadSnapshot(snapshots.length - 1);
-                              }
-                          });
-
-          // Load snapshots on page load
-          loadSnapshots();
-        </script>
-      </body>
-    </html>
-    """
+        loadSnapshots();
+    </script>
+</body>
+</html>
+"""
 
 if __name__ == '__main__':
     # Run the Flask app
