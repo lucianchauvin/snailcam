@@ -4,6 +4,7 @@ import numpy as np
 
 from PIL import Image
 from flask import Flask, Response, request, jsonify, send_file
+import requests
 from io import BytesIO
 import os
 from pathlib import Path
@@ -735,19 +736,19 @@ def index():
 
              // Update the DOM with the specific keys from your JSON output
              // .toFixed(1) rounds it to one decimal place for a cleaner look
-             const celsius = data['internal temperature'];
-             const fahrenheit = (celsius * 1.8) + 32;
+             const fahrenheit = data['temperature'];
              if(fahrenheit !== fahrenheit){
                  console.error('Bad response:', response.status, response.statusText);
                  return;
                  }
 
              document.getElementById('temp-val').innerText = fahrenheit.toFixed(1);
-             document.getElementById('hum-val').innerText = data['internal humidity'].toFixed(1);
+             document.getElementById('hum-val').innerText = data['humidity'].toFixed(1);
              } catch (error) {
                  console.error('Error fetching temperature data:', error);
                  }
              }
+             setInterval(updateEnvironmentalStats, 100);
           </script>
       </body>
     </html>
@@ -815,11 +816,7 @@ def get_snapshot(filename):
 t = Temper()
 @app.route('/temp')
 def get_temp():
-    usblist = USBList()
-    t.usb_devices = usblist.get_usb_devices()
-
-    result = json.dumps(t.read()[0], indent=2)
-    return result
+    return jsonify(requests.get('http://192.168.88.241').json())
 
 @app.route('/snapshots')
 def snapshots_page():
