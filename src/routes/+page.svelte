@@ -8,6 +8,7 @@
 	import ChevronDown from 'carbon-icons-svelte/lib/ChevronDown.svelte';
 	import ChevronLeft from 'carbon-icons-svelte/lib/ChevronLeft.svelte';
 	import ChevronRight from 'carbon-icons-svelte/lib/ChevronRight.svelte';
+	import LogoInstagram from 'carbon-icons-svelte/lib/LogoInstagram.svelte';
 	import {
 		CAMERA_CONTROLS,
 		PAN_STEP, TILT_STEP,
@@ -15,6 +16,8 @@
 		TILT_MIN, TILT_MAX,
 		ZOOM_MIN, ZOOM_MAX
 	} from '$lib/controls.js';
+
+	let { data } = $props();
 
 	let pan = $state(0);
 	let tilt = $state(0);
@@ -71,9 +74,9 @@
 		try {
 			const res = await fetch('/api/camera_state');
 			if (!res.ok) return;
-			const data = await res.json();
-			if (!data.values) return;
-			const v = data.values;
+			const state = await res.json();
+			if (!state.values) return;
+			const v = state.values;
 			initializing = true;
 			if (v.pan_absolute  !== undefined) pan  = v.pan_absolute;
 			if (v.tilt_absolute !== undefined) tilt = v.tilt_absolute;
@@ -103,7 +106,18 @@
 	});
 </script>
 
-<svelte:head><title>Snail Cam</title></svelte:head>
+<svelte:head>
+	<title>Snail Cam</title>
+	<meta property="og:title" content="Snail Cam — Live Snail Feed" />
+	<meta property="og:description" content="Watch snails live. Pan, tilt, zoom. Also on Instagram @lucians_snails." />
+	<meta property="og:image" content="{data.origin}/api/latest-snapshot" />
+	<meta property="og:image:type" content="image/jpeg" />
+	<meta property="og:type" content="website" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Snail Cam — Live Snail Feed" />
+	<meta name="twitter:description" content="Watch snails live. Pan, tilt, zoom. Also on Instagram @lucians_snails." />
+	<meta name="twitter:image" content="{data.origin}/api/latest-snapshot" />
+</svelte:head>
 <svelte:window onkeydown={handleKeydown} />
 
 <Header company="Snail" platformName="Cam" href="/">
@@ -113,6 +127,17 @@
 	<HeaderNav>
 		<HeaderNavItem href="/snapshots" text="View Snapshots" />
 	</HeaderNav>
+	<svelte:fragment slot="header-utilities">
+		<a
+			href="https://www.instagram.com/lucians_snails"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="instagram-btn"
+			aria-label="Instagram @lucians_snails"
+		>
+			<LogoInstagram size={20} />
+		</a>
+	</svelte:fragment>
 </Header>
 
 <div class="page-body">
@@ -203,6 +228,21 @@
 </div>
 
 <style>
+	.instagram-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 3rem;
+		height: 3rem;
+		color: #ffffff;
+		text-decoration: none;
+		transition: background-color 0.15s;
+	}
+
+	.instagram-btn:hover {
+		background-color: rgba(255, 255, 255, 0.15);
+	}
+
 	.page-body {
 		padding-top: 3rem;
 		display: flex;
