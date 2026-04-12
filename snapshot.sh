@@ -1,8 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-source /home/snail/snailsite/.venv/bin/activate
-
 SNAPSHOT_DIR="/home/snail/snapshots"
 mkdir -p "$SNAPSHOT_DIR"
 
@@ -11,8 +9,7 @@ while true; do
     TMP_FILE="/tmp/tmpsnailimg_$TIMESTAMP.jpg"
     OUT_FILE="$SNAPSHOT_DIR/$TIMESTAMP.jpg"
 
-    if ffmpeg -y -loglevel error -i http://127.0.0.1:5000/video_feed -frames:v 1 "$TMP_FILE"; then
-        # Verify file exists and is readable
+    if ffmpeg -y -loglevel error -i http://127.0.0.1:5000/api/video_feed -frames:v 1 "$TMP_FILE"; then
         if [[ ! -s "$TMP_FILE" ]]; then
             echo "[$TIMESTAMP] Empty snapshot — skipping."
             rm -f "$TMP_FILE"
@@ -23,15 +20,14 @@ while true; do
         BRIGHTNESS=$(magick "$TMP_FILE" -colorspace Gray -format "%[fx:mean]" info: 2>/dev/null || echo "0")
         if (( $(echo "$BRIGHTNESS > 0.26" | bc -l) )); then
             mv "$TMP_FILE" "$OUT_FILE"
-            echo "[$TIMESTAMP] Saved bright snapshot (brightness=$BRIGHTNESS)"
+            echo "[$TIMESTAMP] Saved snapshot (brightness=$BRIGHTNESS)"
         else
             echo "[$TIMESTAMP] Skipped dark snapshot (brightness=$BRIGHTNESS)"
             rm -f "$TMP_FILE"
         fi
     else
-        echo "[$TIMESTAMP] Failed to fetch snapshot from /video_feed"
+        echo "[$TIMESTAMP] Failed to fetch snapshot"
     fi
 
     sleep 60
 done
-
