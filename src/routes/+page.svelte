@@ -109,13 +109,13 @@
 <svelte:head>
 	<title>Snail Cam</title>
 	<meta property="og:title" content="Snail Cam — Live Snail Feed" />
-	<meta property="og:description" content="Watch snails live. Pan, tilt, zoom. Also on Instagram @lucians_snails." />
+	<meta property="og:description" content="Watch my snail live. Also on Instagram @lucians_snails." />
 	<meta property="og:image" content="{data.origin}/api/latest-snapshot" />
 	<meta property="og:image:type" content="image/jpeg" />
 	<meta property="og:type" content="website" />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content="Snail Cam — Live Snail Feed" />
-	<meta name="twitter:description" content="Watch snails live. Pan, tilt, zoom. Also on Instagram @lucians_snails." />
+	<meta name="twitter:description" content="Watch my snail live. Also on Instagram @lucians_snails." />
 	<meta name="twitter:image" content="{data.origin}/api/latest-snapshot" />
 </svelte:head>
 <svelte:window onkeydown={handleKeydown} />
