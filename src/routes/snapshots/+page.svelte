@@ -97,7 +97,8 @@
 		<SkipToContent />
 	</svelte:fragment>
 	<HeaderNav>
-		<HeaderNavItem href="/" text="← Live Camera" />
+		<HeaderNavItem href="/"      text="Live Camera" />
+		<HeaderNavItem href="/stats" text="Stats"       />
 	</HeaderNav>
 </Header>
 

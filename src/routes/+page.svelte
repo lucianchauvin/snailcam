@@ -125,7 +125,8 @@
 		<SkipToContent />
 	</svelte:fragment>
 	<HeaderNav>
-		<HeaderNavItem href="/snapshots" text="View Snapshots" />
+		<HeaderNavItem href="/snapshots" text="Snapshots" />
+		<HeaderNavItem href="/stats"     text="Stats"     />
 	</HeaderNav>
 	<svelte:fragment slot="header-utilities">
 		<a

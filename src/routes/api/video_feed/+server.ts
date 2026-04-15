@@ -15,9 +15,18 @@ function ensureFFmpeg() {
 	if (ffmpegProc) return;
 
 	ffmpegProc = spawn('ffmpeg', [
-		'-y', '-r', '60', '-s', '1920x1080',
+		// Input: tell ffmpeg it's a V4L2 device, request native MJPEG so we
+		// can stream the frames directly without re-encoding (c:v copy below).
+		// If your camera doesn't support MJPEG output, swap -input_format mjpeg
+		// for -input_format yuyv422 and change -c:v copy to -c:v mjpeg -q:v 5.
+		'-f', 'v4l2',
+		'-input_format', 'mjpeg',
+		'-framerate', '60',
+		'-video_size', '1920x1080',
 		'-i', '/dev/video0',
-		'-an', '-vcodec', 'mjpeg', '-q:v', '2',
+		// Output: pass JPEG frames straight through — no decode/re-encode cycle.
+		'-an', '-c:v', 'copy',
+		'-flush_packets', '1',
 		'-f', 'image2pipe', 'pipe:1'
 	]);
 
