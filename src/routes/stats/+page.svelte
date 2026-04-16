@@ -21,8 +21,8 @@
 	let loading  = $state(true);
 	let errorMsg = $state('');
 
-	const RANGES     = ['24h', '7d', '30d', 'all'] as const;
-	const RANGE_HOURS: Record<string, number | null> = { '24h': 24, '7d': 168, '30d': 720, 'all': null };
+	const RANGES     = ['1h', '6h', '24h', '7d', '30d', 'all'] as const;
+	const RANGE_HOURS: Record<string, number | null> = { '1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720, 'all': null };
 	let rangeIdx = $state(0);
 	const range  = $derived(RANGES[rangeIdx]);
 
@@ -91,7 +91,9 @@
 			hours > 24 * 20  ? 7  * 86_400_000 :
 			hours > 24 * 4   ?     86_400_000  :
 			hours > 24       ? 12 * 3_600_000  :
-			                    3 * 3_600_000;
+			hours > 6        ?  3 * 3_600_000  :
+			hours > 1        ?      3_600_000  :
+			                   15 * 60_000;
 		const first = Math.ceil(xMin / interval) * interval;
 		const ticks: number[] = [];
 		for (let t = first; t <= xMax; t += interval) ticks.push(t);
@@ -103,6 +105,8 @@
 		const d = new Date(ts);
 		if (!hours || hours > 24 * 4)
 			return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		if (hours <= 1)
+			return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 		return d.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
 	}
 
@@ -182,6 +186,8 @@
 		<div class="chart-header">
 			<h2 class="chart-title">Climate History</h2>
 			<ContentSwitcher size="sm" bind:selectedIndex={rangeIdx}>
+				<Switch text="1h"  />
+				<Switch text="6h"  />
 				<Switch text="24h" />
 				<Switch text="7d"  />
 				<Switch text="30d" />
