@@ -5,8 +5,8 @@ const FAN_IP    = '192.168.88.237';
 const HEATER_IP = '192.168.88.236';
 const LIGHT_IP  = '192.168.88.238';
 
-const HUM_FAN_ON      = 90;
-const HUM_FAN_OFF     = 82;
+const HUM_FAN_ON      = 93;
+const HUM_FAN_OFF     = 83;
 const FAN_MAX_MS      = 5 * 60 * 1000;
 
 type Subscriber = (msg: string) => void;
