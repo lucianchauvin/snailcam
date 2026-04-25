@@ -26,6 +26,9 @@
 	let initializing = $state(false);
 	let temperature = $state<number | null>(null);
 	let humidity = $state<number | null>(null);
+	let deviceStates = $state<{ fan: boolean | null; heater: boolean | null; light: boolean | null }>({
+		fan: null, heater: null, light: null
+	});
 	let showNotification = $state(true);
 	let videoContainer = $state<HTMLDivElement | null>(null);
 	let controlValues = $state(
@@ -99,6 +102,7 @@
 					temperature = data.temperature;
 					humidity = data.humidity;
 				}
+				if (data.devices) deviceStates = data.devices;
 			} catch {}
 		};
 		const notifTimeout = setTimeout(() => { showNotification = false; }, 7000);
@@ -128,18 +132,33 @@
 		<HeaderNavItem href="/snapshots" text="Snapshots" />
 		<HeaderNavItem href="/stats"     text="Stats"     />
 	</HeaderNav>
-	<svelte:fragment slot="header-utilities">
-		<a
-			href="https://www.instagram.com/lucians_snails"
-			target="_blank"
-			rel="noopener noreferrer"
-			class="instagram-btn"
-			aria-label="Instagram @lucians_snails"
-		>
-			<LogoInstagram size={20} />
-		</a>
-	</svelte:fragment>
 </Header>
+
+<div class="header-right">
+	<div class="device-status">
+		<span class="device-indicator">
+			<span class="dot" class:dot-on={deviceStates.heater === true} class:dot-off={deviceStates.heater === false}></span>
+			<span class="device-label">HEATER</span>
+		</span>
+		<span class="device-indicator">
+			<span class="dot" class:dot-on={deviceStates.light === true} class:dot-off={deviceStates.light === false}></span>
+			<span class="device-label">LIGHT</span>
+		</span>
+		<span class="device-indicator">
+			<span class="dot" class:dot-on={deviceStates.fan === true} class:dot-off={deviceStates.fan === false}></span>
+			<span class="device-label">FAN</span>
+		</span>
+	</div>
+	<a
+		href="https://www.instagram.com/lucians_snails"
+		target="_blank"
+		rel="noopener noreferrer"
+		class="instagram-btn"
+		aria-label="Instagram @lucians_snails"
+	>
+		<LogoInstagram size={20} />
+	</a>
+</div>
 
 <div class="page-body">
 	<div
@@ -229,6 +248,25 @@
 </div>
 
 <style>
+	.header-right {
+		position: fixed;
+		top: 0;
+		right: 0;
+		height: 3rem;
+		display: flex;
+		align-items: center;
+		z-index: 8000;
+		gap: 0;
+	}
+
+	.device-status {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 0 16px;
+		height: 100%;
+	}
+
 	.instagram-btn {
 		display: flex;
 		align-items: center;
@@ -294,6 +332,31 @@
 	.stat-val {
 		color: #0f62fe;
 	}
+
+	.device-indicator {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+	}
+
+	.device-label {
+		font-family: 'IBM Plex Mono', monospace;
+		font-size: 0.6rem;
+		font-weight: 600;
+		color: #8d8d8d;
+		letter-spacing: 0.04em;
+	}
+
+	.dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: #393939;
+		flex-shrink: 0;
+	}
+
+	.dot-on  { background: #42be65; }
+	.dot-off { background: #525252; }
 
 	.notice-overlay {
 		position: absolute;
